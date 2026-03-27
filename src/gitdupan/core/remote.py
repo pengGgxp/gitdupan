@@ -115,7 +115,7 @@ class BaiduPCS:
                 block_list.append(md5.hexdigest())
         return block_list
 
-    def upload_file(self, local_path: str, remote_path: str):
+    def upload_file(self, local_path: str, remote_path: str, overwrite: bool = False):
         size = os.path.getsize(local_path)
         block_list = self._calculate_block_list(local_path)
         
@@ -130,7 +130,8 @@ class BaiduPCS:
             "size": size,
             "isdir": 0,
             "autoinit": 1,
-            "block_list": json.dumps(block_list)
+            "block_list": json.dumps(block_list),
+            "rtype": 3 if overwrite else 1  # 3: overwrite, 1: rename if exists
         }
         res = _retry_request(requests.post, precreate_url, params=params, data=data, timeout=10).json()
         
@@ -188,7 +189,8 @@ class BaiduPCS:
             "size": size,
             "isdir": 0,
             "block_list": json.dumps(block_list),
-            "uploadid": uploadid
+            "uploadid": uploadid,
+            "rtype": 3 if overwrite else 1
         }
         _retry_request(requests.post, precreate_url, params=create_params, data=create_data, timeout=10)
         
@@ -197,5 +199,5 @@ class BaiduPCS:
         fd, temp_path = tempfile.mkstemp()
         with os.fdopen(fd, 'w', encoding='utf-8') as f:
             f.write(content)
-        self.upload_file(temp_path, remote_path)
+        self.upload_file(temp_path, remote_path, overwrite=True)
         os.remove(temp_path)
