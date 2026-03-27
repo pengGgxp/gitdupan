@@ -239,8 +239,9 @@ def status():
                     
     return {"staged": staged, "modified": modified, "untracked": untracked}
 
-def checkout(commit_hash: str):
-    repo_dir = get_repo_dir()
+def checkout(commit_hash: str, repo_dir: str = None):
+    if not repo_dir:
+        repo_dir = get_repo_dir()
     work_dir = os.path.dirname(repo_dir)
     
     obj_data = get_object(repo_dir, commit_hash)

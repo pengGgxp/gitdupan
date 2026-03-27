@@ -148,5 +148,19 @@ def pull():
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
 
+@cli.command()
+@click.argument('url')
+@click.argument('dest', required=False)
+def clone(url, dest):
+    """Clone a repository into a new directory."""
+    from gitdupan.core.sync import clone as sync_clone
+    try:
+        console.print(f"[yellow]Cloning into '{dest or url.strip('/').split('/')[-1]}' from {url}...[/yellow]")
+        result = sync_clone(url, dest)
+        console.print(f"[green]{result}[/green]")
+        console.print("[green]Clone successful![/green]")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+
 if __name__ == '__main__':
     cli()

@@ -4,8 +4,10 @@ from gitdupan.core.repo import get_repo_dir, get_current_commit
 from gitdupan.core.pack import create_pack, unpack
 from gitdupan.core.remote import BaiduPCS
 
-def set_remote(url: str):
-    repo_dir = get_repo_dir()
+def set_remote(url: str, repo_dir: str = None):
+    if not repo_dir:
+        repo_dir = get_repo_dir()
+        
     config_path = os.path.join(repo_dir, "config")
     
     with open(config_path, "r", encoding="utf-8") as f:
@@ -16,8 +18,10 @@ def set_remote(url: str):
     with open(config_path, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=4)
 
-def get_remote() -> str:
-    repo_dir = get_repo_dir()
+def get_remote(repo_dir: str = None) -> str:
+    if not repo_dir:
+        repo_dir = get_repo_dir()
+        
     config_path = os.path.join(repo_dir, "config")
     
     with open(config_path, "r", encoding="utf-8") as f:
@@ -62,9 +66,11 @@ def push():
     pcs.write_file_content("HEAD", local_head)
     return f"Pushed to remote {remote_path}"
 
-def pull():
-    repo_dir = get_repo_dir()
-    remote_path = get_remote()
+def pull(repo_dir: str = None):
+    if not repo_dir:
+        repo_dir = get_repo_dir()
+        
+    remote_path = get_remote(repo_dir)
     pcs = BaiduPCS(remote_path)
     
     local_head = get_current_commit(repo_dir)
@@ -105,6 +111,36 @@ def pull():
         f.write(remote_head)
         
     from gitdupan.core.repo import checkout
-    checkout(remote_head)
+    checkout(remote_head, repo_dir)
     
     return f"Pulled from remote. HEAD is now at {remote_head[:8]}"
+
+def clone(url: str, dest: str = None):
+    """Clone a repository from a remote URL."""
+    from gitdupan.core.repo import init_repo
+    
+    # 1. Determine destination directory
+    if not dest:
+        # Default to the last part of the URL
+        dest = url.strip('/').split('/')[-1]
+        if not dest:
+            dest = "gitdupan-repo"
+            
+    dest_path = os.path.abspath(dest)
+    if os.path.exists(dest_path) and os.listdir(dest_path):
+        raise Exception(f"Destination path '{dest}' already exists and is not an empty directory.")
+        
+    os.makedirs(dest_path, exist_ok=True)
+    
+    # 2. Init empty repo in destination
+    init_repo(dest_path)
+    repo_dir = os.path.join(dest_path, ".gitdupan")
+    
+    # 3. Set remote
+    set_remote(url, repo_dir)
+    
+    # 4. Pull data
+    # Change working directory temporarily so pull/checkout works naturally 
+    # (though we modified pull to accept repo_dir, some inner functions might still use get_repo_dir if not careful)
+    # Actually, we passed repo_dir to pull(), which is good.
+    return pull(repo_dir)
