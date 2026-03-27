@@ -1,0 +1,20 @@
+[project]
+name = "gitdupan"
+version = "0.1.0"
+description = "A Git-like data management tool synced with Baidu Netdisk"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "click>=8.3.1",
+    "requests>=2.33.0",
+    "rich>=14.3.3",
+]
+
+[project.scripts]
+gitdupan = "gitdupan.cli:cli"
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.19.0",
+    "pytest>=9.0.2",
+]
