@@ -16,13 +16,13 @@ jobs:
         include:
           - os: ubuntu-latest
             artifact_name: gitdupan
-            asset_name: gitdupan-linux-amd64
+            asset_name: gitdupan-linux-amd64.tar.gz
           - os: windows-latest
             artifact_name: gitdupan.exe
-            asset_name: gitdupan-windows-amd64.exe
+            asset_name: gitdupan-windows-amd64.zip
           - os: macos-latest
             artifact_name: gitdupan
-            asset_name: gitdupan-macos-amd64
+            asset_name: gitdupan-macos-amd64.tar.gz
 
     steps:
       - name: Checkout Code
@@ -40,11 +40,23 @@ jobs:
       - name: Build Executable with PyInstaller
         run: uv run pyinstaller --name gitdupan --onefile --console src/gitdupan/cli.py
 
+      - name: Compress Artifact (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd dist
+          tar -czvf ../${{ matrix.asset_name }} ${{ matrix.artifact_name }}
+
+      - name: Compress Artifact (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd dist
+          Compress-Archive -Path ${{ matrix.artifact_name }} -DestinationPath ../${{ matrix.asset_name }}
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset_name }}
-          path: dist/${{ matrix.artifact_name }}
+          path: ${{ matrix.asset_name }}
 
   release:
     name: Create Release
@@ -69,14 +81,8 @@ jobs:
       - name: Prepare assets for release
         run: |
           mkdir -p release_assets
-          # Move artifacts to release directory and rename them to asset_name
-          cp artifacts/gitdupan-linux-amd64/gitdupan release_assets/gitdupan-linux-amd64 || true
-          cp artifacts/gitdupan-windows-amd64.exe/gitdupan.exe release_assets/gitdupan-windows-amd64.exe || true
-          cp artifacts/gitdupan-macos-amd64/gitdupan release_assets/gitdupan-macos-amd64 || true
-          
-          # Make linux/macos binaries executable
-          chmod +x release_assets/gitdupan-linux-amd64 || true
-          chmod +x release_assets/gitdupan-macos-amd64 || true
+          # Move all compressed artifacts directly to the release directory
+          cp artifacts/*/* release_assets/ || true
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
