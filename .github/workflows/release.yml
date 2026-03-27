@@ -1,0 +1,83 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on tags matching v*, i.e. v1.0.0
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: gitdupan
+            asset_name: gitdupan-linux-amd64
+          - os: windows-latest
+            artifact_name: gitdupan.exe
+            asset_name: gitdupan-windows-amd64.exe
+          - os: macos-latest
+            artifact_name: gitdupan
+            asset_name: gitdupan-macos-amd64
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v2
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install Dependencies
+        run: uv sync --all-extras
+
+      - name: Build Executable with PyInstaller
+        run: uv run pyinstaller --name gitdupan --onefile --console src/gitdupan/cli.py
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: dist/${{ matrix.artifact_name }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts/
+
+      - name: Prepare assets for release
+        run: |
+          mkdir -p release_assets
+          # Move artifacts to release directory and rename them to asset_name
+          cp artifacts/gitdupan-linux-amd64/gitdupan release_assets/gitdupan-linux-amd64 || true
+          cp artifacts/gitdupan-windows-amd64.exe/gitdupan.exe release_assets/gitdupan-windows-amd64.exe || true
+          cp artifacts/gitdupan-macos-amd64/gitdupan release_assets/gitdupan-macos-amd64 || true
+          
+          # Make linux/macos binaries executable
+          chmod +x release_assets/gitdupan-linux-amd64 || true
+          chmod +x release_assets/gitdupan-macos-amd64 || true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release_assets/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
