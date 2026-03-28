@@ -12,15 +12,36 @@ jobs:
     strategy:
       matrix:
         include:
+          # Linux AMD64 (x86_64)
           - os: ubuntu-latest
             artifact_name: gitdupan
             asset_name: gitdupan-linux-amd64.tar.gz
+            python_target: '3.12'
+          # Linux ARM64 (aarch64)
+          - os: ubuntu-24.04-arm
+            artifact_name: gitdupan
+            asset_name: gitdupan-linux-arm64.tar.gz
+            python_target: '3.12'
+          # Windows AMD64 (64-bit)
           - os: windows-latest
             artifact_name: gitdupan.exe
             asset_name: gitdupan-windows-amd64.zip
-          - os: macos-latest
+            python_target: '3.12'
+          # Windows x86 (32-bit)
+          - os: windows-latest
+            artifact_name: gitdupan.exe
+            asset_name: gitdupan-windows-386.zip
+            python_target: '3.12-x86'
+          # macOS Intel (x86_64)
+          - os: macos-13
             artifact_name: gitdupan
             asset_name: gitdupan-macos-amd64.tar.gz
+            python_target: '3.12'
+          # macOS Apple Silicon (ARM64)
+          - os: macos-14
+            artifact_name: gitdupan
+            asset_name: gitdupan-macos-arm64.tar.gz
+            python_target: '3.12'
 
     steps:
       - name: Checkout Code
@@ -30,7 +51,9 @@ jobs:
         uses: astral-sh/setup-uv@v2
 
       - name: Set up Python
-        run: uv python install 3.12
+        run: |
+          uv python install ${{ matrix.python_target }}
+          uv python pin ${{ matrix.python_target }}
 
       - name: Install Dependencies
         run: uv sync --all-extras

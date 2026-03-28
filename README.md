@@ -30,10 +30,19 @@ uv tool install git+https://github.com/pengGgxp/gitdupan.git
 
 ### 方法二：直接下载独立可执行文件 (小白友好)
 
-如果你不想配置任何 Python 环境，可以直接在 GitHub 的 **Releases** 页面下载对应系统的压缩包：
-- Windows: `gitdupan-windows-amd64.zip`
-- macOS: `gitdupan-macos-amd64.tar.gz`
-- Linux: `gitdupan-linux-amd64.tar.gz`
+如果你不想配置任何 Python 环境，可以直接在 GitHub 的 **Releases** 页面下载对应系统和架构的压缩包：
+
+**Windows**
+- `gitdupan-windows-amd64.zip` (64位系统)
+- `gitdupan-windows-386.zip` (32位系统)
+
+**macOS**
+- `gitdupan-macos-arm64.tar.gz` (Apple Silicon M1/M2/M3)
+- `gitdupan-macos-amd64.tar.gz` (Intel 芯片)
+
+**Linux**
+- `gitdupan-linux-amd64.tar.gz` (x86_64)
+- `gitdupan-linux-arm64.tar.gz` (ARM64 架构)
 
 解压后，你会得到 `gitdupan.exe`（以及 `gitdp.exe`, `gid.exe`）。你可以将其复制到任何地方，并建议将其所在目录添加到系统的环境变量 `PATH` 中。
 
