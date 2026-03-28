@@ -38,17 +38,31 @@ jobs:
       - name: Build Executable with PyInstaller
         run: uv run pyinstaller --name gitdupan --onefile --console src/gitdupan/cli.py
 
+      - name: Create Alias Copies (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd dist
+          cp gitdupan gitdp
+          cp gitdupan gid
+
+      - name: Create Alias Copies (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd dist
+          Copy-Item -Path gitdupan.exe -Destination gitdp.exe
+          Copy-Item -Path gitdupan.exe -Destination gid.exe
+
       - name: Compress Artifact (Unix)
         if: matrix.os != 'windows-latest'
         run: |
           cd dist
-          tar -czvf ../${{ matrix.asset_name }} ${{ matrix.artifact_name }}
+          tar -czvf ../${{ matrix.asset_name }} gitdupan gitdp gid
 
       - name: Compress Artifact (Windows)
         if: matrix.os == 'windows-latest'
         run: |
           cd dist
-          Compress-Archive -Path ${{ matrix.artifact_name }} -DestinationPath ../${{ matrix.asset_name }}
+          Compress-Archive -Path gitdupan.exe, gitdp.exe, gid.exe -DestinationPath ../${{ matrix.asset_name }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
