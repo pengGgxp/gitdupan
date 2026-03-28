@@ -33,36 +33,36 @@ def get_remote(repo_dir: str = None) -> str:
 
 def push():
     repo_dir = get_repo_dir()
-    remote_path = get_remote()
+    remote_path = get_remote(repo_dir)
     pcs = BaiduPCS(remote_path)
     
     local_head = get_current_commit(repo_dir)
     if not local_head:
-        raise Exception("Nothing to push (no commits)")
+        raise Exception("没有可以推送的提交 (本地无 commit)")
         
-    # Get remote HEAD
+    # 获取远端 HEAD
     remote_head = None
     try:
         remote_head_content = pcs.read_file("HEAD")
         if remote_head_content:
             remote_head = remote_head_content.decode('utf-8').strip()
     except Exception:
-        # Remote doesn't have HEAD yet
+        # 远端还没有 HEAD 文件
         pass
         
     if local_head == remote_head:
         return "Everything up-to-date"
         
-    # Create pack
+    # 创建打包文件
     pack_path = create_pack(repo_dir, target_commit=local_head, base_commit=remote_head)
     
     if pack_path:
         pack_name = os.path.basename(pack_path)
-        # Upload pack
+        # 上传打包文件
         pcs.upload_file(pack_path, f"packs/{pack_name}")
-        os.remove(pack_path) # Clean up local pack
+        os.remove(pack_path) # 清理本地的打包文件
         
-    # Update remote HEAD
+    # 更新远端 HEAD
     pcs.write_file_content("HEAD", local_head)
     return f"Pushed to remote {remote_path}"
 
@@ -75,21 +75,21 @@ def pull(repo_dir: str = None):
     
     local_head = get_current_commit(repo_dir)
     
-    # Get remote HEAD
+    # 获取远端 HEAD
     remote_head = None
     try:
         remote_head_content = pcs.read_file("HEAD")
         if remote_head_content:
             remote_head = remote_head_content.decode('utf-8').strip()
     except Exception:
-        raise Exception("Remote repository is empty or inaccessible")
+        raise Exception("远程仓库为空或无法访问")
         
     if local_head == remote_head:
         return "Already up-to-date"
         
-    # Download new packs
-    # In a full implementation we'd check which packs we need.
-    # For now, let's list packs and download missing ones
+    # 下载新的打包文件
+    # 在完整的实现中，我们会检查需要哪些特定的包。
+    # 这里为了简单，我们列出所有包并下载缺失的。
     try:
         packs = pcs.list_dir("packs")
     except Exception:
@@ -97,16 +97,16 @@ def pull(repo_dir: str = None):
     
     for p in packs:
         pack_name = p["server_filename"]
-        # If we already have the target commit of this pack, we might skip it.
-        # But for safety in this simple version, let's just download if it doesn't exist locally
-        # or if we really need it. A better check is if the pack's commit hash is in our local repo.
+        # 即使我们可能已经有了该包的目标 commit，为了安全起见，
+        # 如果本地不存在这个包，我们依然将其下载下来。
+        # 更好的检查方式是确认包对应的 commit hash 是否已经在本地仓库中。
         
         local_pack = os.path.join(repo_dir, "objects", pack_name)
         pcs.download_file(f"packs/{pack_name}", local_pack)
         unpack(repo_dir, local_pack)
         os.remove(local_pack)
         
-    # Fast forward local HEAD
+    # 快进更新本地 HEAD (Fast forward)
     with open(os.path.join(repo_dir, "HEAD"), "w", encoding="utf-8") as f:
         f.write(remote_head)
         
@@ -116,31 +116,29 @@ def pull(repo_dir: str = None):
     return f"Pulled from remote. HEAD is now at {remote_head[:8]}"
 
 def clone(url: str, dest: str = None):
-    """Clone a repository from a remote URL."""
+    """从远端 URL 克隆一个仓库。"""
     from gitdupan.core.repo import init_repo
     
-    # 1. Determine destination directory
+    # 1. 确定目标目录
     if not dest:
-        # Default to the last part of the URL
+        # 默认为 URL 的最后一部分
         dest = url.strip('/').split('/')[-1]
         if not dest:
             dest = "gitdupan-repo"
             
     dest_path = os.path.abspath(dest)
     if os.path.exists(dest_path) and os.listdir(dest_path):
-        raise Exception(f"Destination path '{dest}' already exists and is not an empty directory.")
+        raise Exception(f"目标路径 '{dest}' 已存在且不是空目录。")
         
     os.makedirs(dest_path, exist_ok=True)
     
-    # 2. Init empty repo in destination
+    # 2. 在目标目录初始化空仓库
     init_repo(dest_path)
     repo_dir = os.path.join(dest_path, ".gitdupan")
     
-    # 3. Set remote
+    # 3. 设置远程地址
     set_remote(url, repo_dir)
     
-    # 4. Pull data
-    # Change working directory temporarily so pull/checkout works naturally 
-    # (though we modified pull to accept repo_dir, some inner functions might still use get_repo_dir if not careful)
-    # Actually, we passed repo_dir to pull(), which is good.
+    # 4. 拉取数据
+    # 临时传递 repo_dir 使得 pull/checkout 可以在指定目录下自然地工作
     return pull(repo_dir)

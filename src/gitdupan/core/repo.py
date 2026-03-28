@@ -6,7 +6,7 @@ from gitdupan.utils.hash import hash_file, hash_content
 from gitdupan.utils.ignore import parse_ignore_file, is_ignored
 
 def get_repo_dir(path: str = ".") -> str:
-    # Find .gitdupan upwards
+    # 向上级目录查找 .gitdupan
     curr = os.path.abspath(path)
     while True:
         repo_dir = os.path.join(curr, ".gitdupan")
@@ -14,13 +14,13 @@ def get_repo_dir(path: str = ".") -> str:
             return repo_dir
         parent = os.path.dirname(curr)
         if parent == curr:
-            raise FileNotFoundError("Not a gitdupan repository (or any of the parent directories).")
+            raise FileNotFoundError("未找到 gitdupan 仓库（或任何父目录中也没有）。")
         curr = parent
 
 def init_repo(path: str = "."):
     repo_dir = os.path.join(path, ".gitdupan")
     if os.path.exists(repo_dir):
-        raise FileExistsError(f"Repository already exists in {repo_dir}")
+        raise FileExistsError(f"仓库已存在于 {repo_dir}")
         
     os.makedirs(repo_dir)
     os.makedirs(os.path.join(repo_dir, "objects"))
@@ -44,7 +44,7 @@ def write_index(repo_dir: str, index: dict):
         json.dump(index, f, indent=2)
 
 def store_object(repo_dir: str, content: bytes, obj_type: str = "blob") -> str:
-    """Store an object and return its hash."""
+    """存储一个对象并返回它的哈希值。"""
     data = json.dumps({"type": obj_type, "content": content.decode('utf-8', errors='ignore')}) if obj_type != "blob" else content
     if obj_type != "blob":
         data = data.encode('utf-8')
@@ -61,7 +61,7 @@ def store_object(repo_dir: str, content: bytes, obj_type: str = "blob") -> str:
 def get_object(repo_dir: str, obj_hash: str) -> bytes:
     obj_path = os.path.join(repo_dir, "objects", obj_hash)
     if not os.path.exists(obj_path):
-        raise FileNotFoundError(f"Object {obj_hash} not found")
+        raise FileNotFoundError(f"未找到对象 {obj_hash}")
     with open(obj_path, "rb") as f:
         return f.read()
 
@@ -75,9 +75,9 @@ def add_files(files: list[str]):
     
     for file in files:
         if file == ".":
-            # Add all non-ignored files
+            # 添加所有未被忽略的文件
             for root, dirs, f_names in os.walk(work_dir):
-                # Filter out ignored directories
+                # 过滤掉被忽略的目录
                 dirs[:] = [d for d in dirs if not is_ignored(os.path.relpath(os.path.join(root, d), work_dir), ignore_patterns)]
                 for f_name in f_names:
                     full_path = os.path.join(root, f_name)
@@ -87,7 +87,7 @@ def add_files(files: list[str]):
         else:
             file_path = os.path.abspath(file)
             if os.path.isdir(file_path):
-                # Add directory recursively
+                # 递归添加目录
                 for root, dirs, f_names in os.walk(file_path):
                     dirs[:] = [d for d in dirs if not is_ignored(os.path.relpath(os.path.join(root, d), work_dir), ignore_patterns)]
                     for f_name in f_names:
@@ -145,8 +145,8 @@ def commit(message: str, author: str = "Unknown"):
     if not index:
         raise Exception("Nothing to commit (index is empty). Did you forget to run `gitdupan add <file>`?")
         
-    # Build tree from index
-    # Simple flat tree for now
+    # 根据 index 构建 tree
+    # 目前使用简单的扁平树结构
     tree_content = json.dumps(index).encode('utf-8')
     tree_hash = store_object(repo_dir, tree_content, "tree")
     
@@ -163,14 +163,14 @@ def commit(message: str, author: str = "Unknown"):
     commit_content = json.dumps(commit_data).encode('utf-8')
     commit_hash = store_object(repo_dir, commit_content, "commit")
     
-    # Update HEAD
+    # 更新 HEAD
     with open(os.path.join(repo_dir, "HEAD"), "r", encoding="utf-8") as f:
         head = f.read().strip()
         
     if head.startswith("ref: "):
         update_ref(repo_dir, head[5:], commit_hash)
     else:
-        # Detached HEAD
+        # 分离头指针 (Detached HEAD)
         with open(os.path.join(repo_dir, "HEAD"), "w", encoding="utf-8") as f:
             f.write(commit_hash)
             
@@ -183,14 +183,13 @@ def get_log():
     logs = []
     while commit_hash:
         obj_data = get_object(repo_dir, commit_hash)
-        # It's JSON encoded in the object store wrapped with type info
-        # Wait, my store_object saves pure bytes for blob, but wrapped JSON for tree/commit.
-        # Let's decode it.
+        # 它是在对象存储中用类型信息包装的 JSON 编码数据
+        # 尝试解码它
         try:
             wrapper = json.loads(obj_data.decode('utf-8'))
             commit_data = json.loads(wrapper["content"])
         except Exception:
-            # fallback if saved differently
+            # 回退处理
             commit_data = json.loads(obj_data.decode('utf-8'))
             
         logs.append({
@@ -217,14 +216,14 @@ def status():
     modified = []
     
     for root, dirs, files in os.walk(work_dir):
-        # Filter out ignored directories entirely to save time
+        # 完全过滤掉被忽略的目录以节省时间
         dirs[:] = [d for d in dirs if not is_ignored(os.path.relpath(os.path.join(root, d), work_dir), ignore_patterns)]
             
         for file in files:
             file_path = os.path.join(root, file)
             rel_path = os.path.relpath(file_path, work_dir)
             
-            # Skip ignored files
+            # 跳过被忽略的文件
             if is_ignored(rel_path, ignore_patterns):
                 continue
             
@@ -260,7 +259,7 @@ def checkout(commit_hash: str, repo_dir: str = None):
     except Exception:
         index = json.loads(tree_data.decode('utf-8'))
         
-    # Restore files
+    # 恢复文件
     for rel_path, meta in index.items():
         file_path = os.path.join(work_dir, rel_path)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
@@ -268,7 +267,7 @@ def checkout(commit_hash: str, repo_dir: str = None):
         with open(file_path, "wb") as f:
             f.write(blob_data)
             
-    # Update index and HEAD
+    # 更新 index 和 HEAD
     write_index(repo_dir, index)
     
     with open(os.path.join(repo_dir, "HEAD"), "r", encoding="utf-8") as f:

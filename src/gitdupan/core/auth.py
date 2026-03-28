@@ -7,7 +7,7 @@ from rich.console import Console
 
 console = Console()
 
-# We will store global config in user's home directory
+# 我们将全局配置存储在用户的 home 目录下
 GLOBAL_CONFIG_DIR = os.path.expanduser("~/.gitdupan")
 AUTH_FILE = os.path.join(GLOBAL_CONFIG_DIR, "auth.json")
 
@@ -30,8 +30,8 @@ def save_auth(data):
 
 def login(client_id: str, client_secret: str):
     """
-    Perform OAuth 2.0 login with Baidu Netdisk API.
-    Uses 'oob' (out-of-band) flow for desktop applications.
+    使用百度网盘 API 进行 OAuth 2.0 登录。
+    对桌面应用程序使用 'oob' (out-of-band) 授权流程。
     """
     redirect_uri = "oob"
     auth_url = (
@@ -67,7 +67,7 @@ def login(client_id: str, client_secret: str):
     data = response.json()
     
     if "access_token" in data:
-        # Add timestamp to know when it expires
+        # 添加时间戳以便知道何时过期
         data["expires_at"] = time.time() + data.get("expires_in", 2592000)
         data["client_id"] = client_id
         data["client_secret"] = client_secret
@@ -79,20 +79,20 @@ def login(client_id: str, client_secret: str):
 
 def get_access_token():
     """
-    Get the valid access token. Refresh if expired.
+    获取有效的 access token。如果已过期则自动刷新。
     """
     auth_data = load_auth()
     if not auth_data or "access_token" not in auth_data:
         raise Exception("Not logged in. Please run `gitdupan login` first.")
         
-    if time.time() > auth_data.get("expires_at", 0) - 300: # 5 minutes buffer
+    if time.time() > auth_data.get("expires_at", 0) - 300: # 5分钟缓冲时间
         return refresh_token()
         
     return auth_data["access_token"]
 
 def refresh_token():
     """
-    Refresh the access token using the refresh_token.
+    使用 refresh_token 刷新 access token。
     """
     auth_data = load_auth()
     if not auth_data or "refresh_token" not in auth_data:

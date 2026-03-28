@@ -6,17 +6,17 @@ import time
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, DownloadColumn, TransferSpeedColumn, TimeRemainingColumn
 from gitdupan.core.auth import get_access_token
 
-CHUNK_SIZE = 4 * 1024 * 1024  # 4MB chunks for Baidu PCS
+CHUNK_SIZE = 4 * 1024 * 1024  # 百度 PCS 的 4MB 分片大小
 
 def _retry_request(method, url, max_retries=3, **kwargs):
-    """Helper to retry requests on connection errors."""
+    """在连接错误时重试请求的辅助函数。"""
     for attempt in range(max_retries):
         try:
             return method(url, **kwargs)
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
             if attempt == max_retries - 1:
                 raise
-            time.sleep(2 ** attempt)  # Exponential backoff
+            time.sleep(2 ** attempt)  # 指数退避重试
 
 class BaiduPCS:
     def __init__(self, base_dir: str):
@@ -38,7 +38,7 @@ class BaiduPCS:
         return []
 
     def get_download_link(self, path: str) -> str:
-        """Get the dlink for a file."""
+        """获取文件的下载链接 (dlink)。"""
         url = "https://pan.baidu.com/rest/2.0/xpan/multimedia"
         params = {
             "method": "filemetas",
@@ -62,15 +62,15 @@ class BaiduPCS:
         return None
 
     def download_file(self, remote_path: str, local_path: str):
-        """Streaming download for large files."""
+        """用于大文件的流式下载。"""
         dlink_url = self.get_download_link(remote_path)
         if not dlink_url:
-            raise Exception(f"Could not get download link for {remote_path}")
+            raise Exception(f"无法获取 {remote_path} 的下载链接")
             
         headers = {"User-Agent": "pan.baidu.com"}
         os.makedirs(os.path.dirname(local_path), exist_ok=True)
         
-        # Use streaming to avoid loading huge files into memory
+        # 使用流式传输以避免将巨大文件加载到内存中
         with _retry_request(requests.get, dlink_url, headers=headers, stream=True, timeout=15) as r:
             r.raise_for_status()
             total_size = int(r.headers.get('content-length', 0))
@@ -100,10 +100,10 @@ class BaiduPCS:
         for f in files:
             if f["server_filename"] == file_name:
                 return f["fs_id"]
-        raise FileNotFoundError(f"File {path} not found on remote")
+        raise FileNotFoundError(f"未在远端找到文件 {path}")
 
     def _calculate_block_list(self, local_path: str) -> list[str]:
-        """Calculate MD5 for each chunk of the file."""
+        """计算文件的每个分片的 MD5。"""
         block_list = []
         with open(local_path, "rb") as f:
             while True:
@@ -119,7 +119,7 @@ class BaiduPCS:
         size = os.path.getsize(local_path)
         block_list = self._calculate_block_list(local_path)
         
-        # 1. Precreate
+        # 1. 预创建 (Precreate)
         precreate_url = "https://pan.baidu.com/rest/2.0/xpan/file"
         params = {
             "method": "precreate",
@@ -131,18 +131,18 @@ class BaiduPCS:
             "isdir": 0,
             "autoinit": 1,
             "block_list": json.dumps(block_list),
-            "rtype": 3 if overwrite else 1  # 3: overwrite, 1: rename if exists
+            "rtype": 3 if overwrite else 1  # 3: 覆盖, 1: 如果存在则重命名
         }
         res = _retry_request(requests.post, precreate_url, params=params, data=data, timeout=10).json()
         
         if "uploadid" not in res:
-            if res.get("errno") == 0 or res.get("errno") == 40748: # 40748 = file already exists
-                return # File might be identical or rapidly uploaded
-            raise Exception(f"Precreate failed: {res}")
+            if res.get("errno") == 0 or res.get("errno") == 40748: # 40748 = 文件已存在
+                return # 文件可能完全相同或者被快速重复上传
+            raise Exception(f"预创建失败: {res}")
             
         uploadid = res["uploadid"]
         
-        # 2. Upload chunks sequentially
+        # 2. 顺序上传分片 (Upload chunks sequentially)
         upload_url = "https://d.pcs.baidu.com/rest/2.0/pcs/superfile2"
         filename = os.path.basename(local_path)
         
@@ -175,11 +175,11 @@ class BaiduPCS:
                     files = {"file": ("chunk", chunk_data)}
                     up_res = _retry_request(requests.post, upload_url, params=up_params, files=files, timeout=60).json()
                     if "md5" not in up_res:
-                        raise Exception(f"Chunk upload failed at part {partseq}: {up_res}")
+                        raise Exception(f"在分片 {partseq} 处上传失败: {up_res}")
                         
                     progress.update(task_id, advance=len(chunk_data))
             
-        # 3. Create (Merge)
+        # 3. 创建合并 (Create)
         create_params = {
             "method": "create",
             "access_token": self._get_token()

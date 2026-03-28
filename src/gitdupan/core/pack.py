@@ -4,12 +4,12 @@ import json
 from gitdupan.core.repo import get_repo_dir, get_object
 
 def get_all_objects_in_commit(repo_dir: str, commit_hash: str) -> set:
-    """Find all objects (commit, tree, blobs) reachable from a commit."""
+    """查找可从 commit 访问的所有对象（commit, tree, blobs）。"""
     objects = set()
     if not commit_hash:
         return objects
         
-    # Queue for BFS/DFS
+    # 用于 BFS/DFS 遍历的队列
     queue = [commit_hash]
     
     while queue:
@@ -37,13 +37,13 @@ def get_all_objects_in_commit(repo_dir: str, commit_hash: str) -> set:
                     if "hash" in meta:
                         queue.append(meta["hash"])
         except Exception:
-            # It's a blob, no further references
+            # 这是一个 blob，没有进一步的引用
             pass
             
     return objects
 
 def create_pack(repo_dir: str, target_commit: str, base_commit: str = None) -> str:
-    """Create a tar.gz pack of objects between base_commit and target_commit."""
+    """创建 base_commit 和 target_commit 之间增量对象的 tar.gz 压缩包。"""
     target_objs = get_all_objects_in_commit(repo_dir, target_commit)
     base_objs = get_all_objects_in_commit(repo_dir, base_commit) if base_commit else set()
     
@@ -63,9 +63,9 @@ def create_pack(repo_dir: str, target_commit: str, base_commit: str = None) -> s
     return pack_path
 
 def unpack(repo_dir: str, pack_path: str):
-    """Extract a pack file into the objects directory."""
+    """将压缩包解压到 objects 目录中。"""
     with tarfile.open(pack_path, "r:gz") as tar:
-        # filter='data' is recommended in newer Python versions to prevent malicious tar files
+        # 在较新的 Python 版本中推荐使用 filter='data' 以防止恶意的 tar 文件
         if hasattr(tarfile, 'data_filter'):
             tar.extractall(path=os.path.join(repo_dir, "objects"), filter='data')
         else:

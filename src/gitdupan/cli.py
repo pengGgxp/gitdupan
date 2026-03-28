@@ -6,12 +6,12 @@ console = Console()
 @click.group()
 @click.version_option()
 def cli():
-    """GitDuPan - A Git-like data management tool synced with Baidu Netdisk."""
+    """GitDuPan - 一个同步到百度网盘的类Git数据管理工具。"""
     pass
 
 @cli.command()
 def init():
-    """Initialize a new gitdupan repository."""
+    """初始化一个新的 gitdupan 仓库。"""
     from gitdupan.core.repo import init_repo
     try:
         init_repo()
@@ -20,17 +20,17 @@ def init():
         console.print(f"[red]Error: {e}[/red]")
 
 @cli.command()
-@click.option('--app-key', prompt='Your Baidu Netdisk App Key', help='Baidu Developer Platform App Key')
-@click.option('--secret-key', prompt='Your Baidu Netdisk Secret Key', hide_input=True, help='Baidu Developer Platform Secret Key')
+@click.option('--app-key', prompt='Your Baidu Netdisk App Key', help='百度开发者平台 App Key')
+@click.option('--secret-key', prompt='Your Baidu Netdisk Secret Key', hide_input=True, help='百度开发者平台 Secret Key')
 def login(app_key, secret_key):
-    """Login to Baidu Netdisk and authorize GitDuPan."""
+    """登录百度网盘并授权 GitDuPan。"""
     from gitdupan.core.auth import login as auth_login
     auth_login(app_key, secret_key)
 
 @cli.command()
 @click.argument('files', nargs=-1)
 def add(files):
-    """Add file contents to the index."""
+    """将文件内容添加到暂存区（Index）。"""
     from gitdupan.core.repo import add_files
     if not files:
         console.print("[yellow]Nothing specified, nothing added.[/yellow]")
@@ -42,10 +42,10 @@ def add(files):
         console.print(f"[red]Error: {e}[/red]")
 
 @cli.command()
-@click.option('-m', '--message', required=True, help="Commit message")
-@click.option('-a', '--author', default="GitDuPan User", help="Author name")
+@click.option('-m', '--message', required=True, help="提交信息")
+@click.option('-a', '--author', default="GitDuPan User", help="作者名称")
 def commit(message, author):
-    """Record changes to the repository."""
+    """记录仓库的更改（创建 Commit）。"""
     from gitdupan.core.repo import commit as repo_commit
     try:
         commit_hash = repo_commit(message, author)
@@ -55,7 +55,7 @@ def commit(message, author):
 
 @cli.command()
 def status():
-    """Show the working tree status."""
+    """显示工作区状态。"""
     from gitdupan.core.repo import status as repo_status
     try:
         stat = repo_status()
@@ -80,7 +80,7 @@ def status():
 
 @cli.command()
 def log():
-    """Show commit logs."""
+    """显示提交日志。"""
     from gitdupan.core.repo import get_log
     from datetime import datetime
     try:
@@ -100,7 +100,7 @@ def log():
 @cli.command()
 @click.argument('commit_hash')
 def checkout(commit_hash):
-    """Checkout a commit."""
+    """检出（切换）到一个特定的 commit。"""
     from gitdupan.core.repo import checkout as repo_checkout
     try:
         repo_checkout(commit_hash)
@@ -112,7 +112,7 @@ def checkout(commit_hash):
 @click.argument('action')
 @click.argument('url', required=False)
 def remote(action, url):
-    """Manage remote repository (e.g. `remote add /apps/gitdupan/myrepo`)."""
+    """管理远程仓库 (例如: `remote add /apps/gitdupan/myrepo`)。"""
     from gitdupan.core.sync import set_remote
     if action == "add":
         if not url:
@@ -128,7 +128,7 @@ def remote(action, url):
 
 @cli.command()
 def push():
-    """Push local changes to Baidu Netdisk."""
+    """将本地更改推送到百度网盘。"""
     from gitdupan.core.sync import push as sync_push
     try:
         console.print("[yellow]Pushing to remote...[/yellow]")
@@ -139,7 +139,7 @@ def push():
 
 @cli.command()
 def pull():
-    """Pull remote changes from Baidu Netdisk."""
+    """从百度网盘拉取远程更改。"""
     from gitdupan.core.sync import pull as sync_pull
     try:
         console.print("[yellow]Pulling from remote...[/yellow]")
@@ -152,7 +152,7 @@ def pull():
 @click.argument('url')
 @click.argument('dest', required=False)
 def clone(url, dest):
-    """Clone a repository into a new directory."""
+    """克隆一个远程仓库到新目录中。"""
     from gitdupan.core.sync import clone as sync_clone
     try:
         console.print(f"[yellow]Cloning into '{dest or url.strip('/').split('/')[-1]}' from {url}...[/yellow]")
