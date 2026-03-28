@@ -36,7 +36,7 @@ uv tool install git+https://github.com/pengGgxp/gitdupan.git
 - Linux: `gitdupan-linux-amd64.tar.gz`
 
 解压后，你会得到 `gitdupan.exe`（以及 `gitdp.exe`, `gid.exe`）。你可以将其复制到任何地方，并建议将其所在目录添加到系统的环境变量 `PATH` 中。
-*(注：由于包含了完整的 Python 解释器，该文件体积较大，约为 20MB+)*
+
 
 ### 方法三：基于源码运行
 
