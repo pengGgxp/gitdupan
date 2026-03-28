@@ -32,11 +32,6 @@ jobs:
             artifact_name: gitdupan.exe
             asset_name: gitdupan-windows-386.zip
             python_target: '3.12-x86'
-          # macOS Intel (x86_64)
-          - os: macos-13
-            artifact_name: gitdupan
-            asset_name: gitdupan-macos-amd64.tar.gz
-            python_target: '3.12'
           # macOS Apple Silicon (ARM64)
           - os: macos-14
             artifact_name: gitdupan

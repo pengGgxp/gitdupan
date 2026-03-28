@@ -38,7 +38,7 @@ uv tool install git+https://github.com/pengGgxp/gitdupan.git
 
 **macOS**
 - `gitdupan-macos-arm64.tar.gz` (Apple Silicon M1/M2/M3)
-- `gitdupan-macos-amd64.tar.gz` (Intel 芯片)
+*(注：由于 GitHub Actions 弃用了旧版 macOS-13 Intel 运行器，目前 macOS 仅提供 Apple Silicon 版本。Intel Mac 用户建议使用 `uv` 方式安装)*
 
 **Linux**
 - `gitdupan-linux-amd64.tar.gz` (x86_64)
