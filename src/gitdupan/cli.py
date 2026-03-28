@@ -20,11 +20,14 @@ def init():
         console.print(f"[red]Error: {e}[/red]")
 
 @cli.command()
-@click.option('--app-key', prompt='Your Baidu Netdisk App Key', help='百度开发者平台 App Key')
-@click.option('--secret-key', prompt='Your Baidu Netdisk Secret Key', hide_input=True, help='百度开发者平台 Secret Key')
+@click.option('--app-key', help='百度开发者平台 App Key（可选，用于自定义授权）')
+@click.option('--secret-key', help='百度开发者平台 Secret Key（可选，用于自定义授权）')
 def login(app_key, secret_key):
     """登录百度网盘并授权 GitDuPan。"""
     from gitdupan.core.auth import login as auth_login
+    if (app_key and not secret_key) or (not app_key and secret_key):
+        console.print("[red]错误: 如果使用自定义授权，必须同时提供 --app-key 和 --secret-key。[/red]")
+        return
     auth_login(app_key, secret_key)
 
 @cli.command()
