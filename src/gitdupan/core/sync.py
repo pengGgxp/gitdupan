@@ -57,10 +57,16 @@ def push():
     pack_path = create_pack(repo_dir, target_commit=local_head, base_commit=remote_head)
     
     if pack_path:
-        pack_name = os.path.basename(pack_path)
-        # 上传打包文件
-        pcs.upload_file(pack_path, f"packs/{pack_name}")
-        os.remove(pack_path) # 清理本地的打包文件
+        from gitdupan.core.pack import split_file
+        
+        # 将 pack 文件进行分卷（如果超过 4GB 会分成多个文件）
+        part_paths = split_file(pack_path)
+        
+        for part_path in part_paths:
+            part_name = os.path.basename(part_path)
+            # 上传分卷文件
+            pcs.upload_file(part_path, f"packs/{part_name}")
+            os.remove(part_path) # 清理本地的分卷文件
         
     # 更新远端 HEAD
     pcs.write_file_content("HEAD", local_head)
@@ -95,14 +101,40 @@ def pull(repo_dir: str = None):
     except Exception:
         packs = []
     
+    from gitdupan.core.pack import merge_files
+    
+    # 按照基础包名进行分组，处理分卷
+    pack_groups = {}
     for p in packs:
-        pack_name = p["server_filename"]
-        # 即使我们可能已经有了该包的目标 commit，为了安全起见，
-        # 如果本地不存在这个包，我们依然将其下载下来。
-        # 更好的检查方式是确认包对应的 commit hash 是否已经在本地仓库中。
+        filename = p["server_filename"]
+        # 处理类似 pack_xxxx.tar.gz.part000 这样的分卷名
+        if ".part" in filename:
+            base_name = filename.split(".part")[0]
+        else:
+            base_name = filename
+            
+        if base_name not in pack_groups:
+            pack_groups[base_name] = []
+        pack_groups[base_name].append(filename)
         
-        local_pack = os.path.join(repo_dir, "objects", pack_name)
-        pcs.download_file(f"packs/{pack_name}", local_pack)
+    for base_name, parts in pack_groups.items():
+        # 如果这是一个多卷的包，确保各卷按 part 序号下载
+        parts.sort()
+        
+        downloaded_parts = []
+        for part_name in parts:
+            local_part = os.path.join(repo_dir, "objects", part_name)
+            pcs.download_file(f"packs/{part_name}", local_part)
+            downloaded_parts.append(local_part)
+            
+        # 组装回原本的压缩包
+        local_pack = os.path.join(repo_dir, "objects", base_name)
+        if len(downloaded_parts) > 1 or ".part" in downloaded_parts[0]:
+            merge_files(downloaded_parts, local_pack)
+        else:
+            # 单一文件，直接使用
+            local_pack = downloaded_parts[0]
+            
         unpack(repo_dir, local_pack)
         os.remove(local_pack)
         
