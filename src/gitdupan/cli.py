@@ -7,7 +7,8 @@ console = Console()
 @click.version_option()
 def cli():
     """GitDuPan - 一个同步到百度网盘的类Git数据管理工具。"""
-    pass
+    from gitdupan.utils.update import check_for_updates
+    check_for_updates()
 
 @cli.command()
 def init():
