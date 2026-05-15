@@ -136,6 +136,8 @@ def push():
     from gitdupan.core.sync import push as sync_push
     try:
         console.print("[yellow]Pushing to remote...[/yellow]")
+        # console.print("111")
+
         result = sync_push()
         console.print(f"[green]{result}[/green]")
     except Exception as e:

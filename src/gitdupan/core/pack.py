@@ -85,7 +85,7 @@ def get_all_objects_in_commit(repo_dir: str, commit_hash: str) -> set:
     return objects
 
 def create_pack(repo_dir: str, target_commit: str, base_commit: str = None) -> str:
-    """创建 base_commit 和 target_commit 之间增量对象的 tar.gz 压缩包。"""
+    """创建 base_commit 和 target_commit 之间增量对象的 tar 压缩包。"""
     target_objs = get_all_objects_in_commit(repo_dir, target_commit)
     base_objs = get_all_objects_in_commit(repo_dir, base_commit) if base_commit else set()
     
@@ -94,10 +94,12 @@ def create_pack(repo_dir: str, target_commit: str, base_commit: str = None) -> s
     if not new_objs:
         return None
         
-    pack_name = f"pack_{target_commit[:8]}.tar.gz"
+    # 为了大幅提高超大文件的打包速度，这里改为只打包不压缩 (w 模式)
+    # 对于视频、图片等二进制文件，gz 压缩不仅无法减小体积，反而会消耗大量 CPU 时间
+    pack_name = f"pack_{target_commit[:8]}.tar"
     pack_path = os.path.join(repo_dir, "objects", pack_name)
     
-    with tarfile.open(pack_path, "w:gz") as tar:
+    with tarfile.open(pack_path, "w") as tar:
         for obj_hash in new_objs:
             obj_file = os.path.join(repo_dir, "objects", obj_hash)
             tar.add(obj_file, arcname=obj_hash)
@@ -106,7 +108,9 @@ def create_pack(repo_dir: str, target_commit: str, base_commit: str = None) -> s
 
 def unpack(repo_dir: str, pack_path: str):
     """将压缩包解压到 objects 目录中。"""
-    with tarfile.open(pack_path, "r:gz") as tar:
+    # 兼容老的 .tar.gz 和新的 .tar 格式
+    mode = "r:gz" if pack_path.endswith(".gz") else "r"
+    with tarfile.open(pack_path, mode) as tar:
         # 在较新的 Python 版本中推荐使用 filter='data' 以防止恶意的 tar 文件
         if hasattr(tarfile, 'data_filter'):
             tar.extractall(path=os.path.join(repo_dir, "objects"), filter='data')

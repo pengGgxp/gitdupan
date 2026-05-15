@@ -3,6 +3,9 @@ import json
 from gitdupan.core.repo import get_repo_dir, get_current_commit
 from gitdupan.core.pack import create_pack, unpack
 from gitdupan.core.remote import BaiduPCS
+from rich.console import Console
+
+console = Console()
 
 def set_remote(url: str, repo_dir: str = None):
     if not repo_dir:
@@ -34,6 +37,8 @@ def get_remote(repo_dir: str = None) -> str:
 def push():
     repo_dir = get_repo_dir()
     remote_path = get_remote(repo_dir)
+    
+    console.print("[cyan]正在初始化远端连接并获取访问令牌...[/cyan]")
     pcs = BaiduPCS(remote_path)
     
     local_head = get_current_commit(repo_dir)
@@ -41,6 +46,7 @@ def push():
         raise Exception("没有可以推送的提交 (本地无 commit)")
         
     # 获取远端 HEAD
+    console.print("[cyan]正在检查远端仓库状态...[/cyan]")
     remote_head = None
     try:
         remote_head_content = pcs.read_file("HEAD")
@@ -54,17 +60,21 @@ def push():
         return "Everything up-to-date"
         
     # 创建打包文件
+    console.print("[cyan]正在计算增量并打包本地对象...[/cyan]")
     pack_path = create_pack(repo_dir, target_commit=local_head, base_commit=remote_head)
     
     if pack_path:
         from gitdupan.core.pack import split_file
         
         # 将 pack 文件进行分卷（如果超过 4GB 会分成多个文件）
+        console.print("[cyan]正在检查文件大小并进行物理分卷 (阈值: 4GB)...[/cyan]")
         part_paths = split_file(pack_path)
+        total_parts = len(part_paths)
         
-        for part_path in part_paths:
+        for i, part_path in enumerate(part_paths):
             part_name = os.path.basename(part_path)
             # 上传分卷文件
+            console.print(f"[cyan]开始上传分卷 {i+1}/{total_parts}: {part_name}[/cyan]")
             pcs.upload_file(part_path, f"packs/{part_name}")
             os.remove(part_path) # 清理本地的分卷文件
         
