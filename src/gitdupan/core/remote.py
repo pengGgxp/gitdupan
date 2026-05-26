@@ -61,6 +61,13 @@ class BaiduPCS:
             return _retry_request(requests.get, dlink_url, headers=headers, timeout=30).content
         return None
 
+    def exists(self, path: str) -> bool:
+        try:
+            self._get_fsid(path)
+            return True
+        except FileNotFoundError:
+            return False
+
     def download_file(self, remote_path: str, local_path: str):
         """用于大文件的流式下载。"""
         dlink_url = self.get_download_link(remote_path)
