@@ -66,6 +66,9 @@ def get_all_objects_in_commit(repo_dir: str, commit_hash: str) -> set:
         except Exception:
             continue
 
+        if not isinstance(wrapper, dict):
+            continue
+
         if wrapper.get("type") == "commit":
             commit_data = json.loads(wrapper["content"])
             if "tree" in commit_data:
